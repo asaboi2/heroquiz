@@ -298,9 +298,7 @@ class HeroQuiz {
 
 // --- End of hero-quiz.js ---
 </script>
-<script>// FILE: hero-app.js
-
-// FILE: hero-app.js (Updated with robust Select2 init)
+<script>// FILE: hero-app.js (Updated with selectId fix and robust Select2 init)
 
 class HeroApp {
     constructor() {
@@ -387,12 +385,13 @@ class HeroApp {
     startQuiz() {
          this.isImportResult = false;
          this.importedSystem = 'HeroType Quiz';
+        // Assumes HeroQuiz class is globally available from hero-quiz.js
+        // Create instance only if needed
         if (!this.quiz) {
-            // Assumes HeroQuiz class is globally available from hero-quiz.js
             this.quiz = new HeroQuiz(this);
         }
         this.showScreen('quiz');
-        this.quiz.initQuiz();
+        this.quiz.initQuiz(); // Always re-initialize
     }
 
     quizComplete(scores) {
@@ -411,6 +410,7 @@ class HeroApp {
     }
 
     calculateQuizResults(scores) {
+         // Assumes heroDescriptions and domainDescriptions are global (from hero-data.js)
          if (typeof heroDescriptions === 'undefined' || typeof domainDescriptions === 'undefined') {
              console.error("Cannot calculate quiz results: Description data not loaded."); return [];
          }
@@ -447,29 +447,27 @@ class HeroApp {
          return results;
     }
 
-    // --- UPDATED updateTypeSelector ---
+    // --- UPDATED updateTypeSelector (using robust setTimeout version) ---
     updateTypeSelector(system) {
+        // Assumes type list variables are global (from hero-data.js)
         if (typeof mbtiTypes === 'undefined' || typeof discTypes === 'undefined' || typeof enneagramTypes === 'undefined' || typeof cliftonStrengthsList === 'undefined') {
             console.error("Cannot update type selector: Type list data not loaded.");
             this.typeSelectorContainer.innerHTML = '<p style="color: red;">Error: Assessment data failed to load.</p>';
             return;
         }
 
-        // Clear previous content and reset button/system
         this.typeSelectorContainer.innerHTML = '';
         this.mapResultButton.style.display = 'none';
         this.importedSystem = system;
         let html = '';
         let optionsArray = [];
-        const selectId = 'typeSelect'; // Use a constant ID
+        const selectId = 'typeSelect'; // Consistent ID for the select element
         let placeholder = '';
 
         if (!system) return;
 
-        // Start building the section HTML
         html = `<div class="import-section"><label for="${selectId}">2. Select Your Type/Strengths:</label>`;
 
-        // Determine options and placeholder based on system
         switch (system) {
             case 'mbti': optionsArray = mbtiTypes; placeholder = '-- Select MBTI Type --'; break;
             case 'disc': optionsArray = discTypes; placeholder = '-- Select DISC Style --'; break;
@@ -478,241 +476,153 @@ class HeroApp {
             default: console.warn("Unknown assessment system:", system); return;
         }
 
-        // Build the select element HTML
         if (system === 'clifton') {
             html += `<p style="font-size:0.9em; color: #666; margin-bottom: 10px;">Select your Top 5 CliftonStrengths themes:</p>`;
-            html += `<select id="${selectId}" multiple="multiple" style="width: 100%;">`;
+            html += `<select id="${selectId}" multiple="multiple" style="width: 100%;">`; // Use the ID here
             optionsArray.forEach(opt => html += `<option value="${opt}">${opt}</option>`);
             html += `</select>`;
         } else {
-            html += `<select id="${selectId}">`;
+            html += `<select id="${selectId}">`; // Use the ID here
             html += `<option value="">${placeholder}</option>`;
             optionsArray.forEach(opt => html += `<option value="${opt}">${opt}</option>`);
             html += `</select>`;
         }
-        html += `</div>`; // Close import-section div
-
-        // Add the generated HTML to the DOM *FIRST*
+        html += `</div>`;
         this.typeSelectorContainer.innerHTML = html;
 
-        // --- Initialize Select2 or add listeners *AFTER* HTML is in DOM ---
         if (system === 'clifton') {
-            // Add a small delay to ensure DOM is fully ready for Select2
-            setTimeout(() => {
-                const selectElement = $(`#${selectId}`); // Use jQuery selector
-                 // Check if jQuery and Select2 plugin are available *NOW*
+            setTimeout(() => { // Delay initialization slightly
+                const selectElement = $(`#${selectId}`); // Target by ID
                 if (typeof $ !== 'undefined' && $.fn.select2) {
                     try {
-                        // Initialize Select2
-                        selectElement.select2({
-                            placeholder: placeholder,
-                            maximumSelectionLength: 5,
-                            closeOnSelect: false
-                        });
-
-                        // Attach change listener to the Select2 element
-                        selectElement.on('change', () => {
-                            const selectedCount = selectElement.select2('data').length;
-                            this.mapResultButton.style.display = selectedCount === 5 ? 'block' : 'none';
-                        });
-
-                         // Remove any previous error message if initialization succeeds
-                         const errorP = this.typeSelectorContainer.querySelector('p.init-error');
-                         if (errorP) errorP.remove();
-
-                    } catch (e) {
-                        // Catch errors specifically during .select2() execution
-                        console.error("Error *during* Select2 initialization:", e);
-                        if (!this.typeSelectorContainer.querySelector('p.init-error')) {
-                           this.typeSelectorContainer.innerHTML += '<p class="init-error" style="color: red;">Error initializing interactive dropdown component.</p>';
-                        }
-                    }
-                } else {
-                    // Libraries not loaded correctly
-                    console.error("jQuery or $.fn.select2 not available when trying to initialize for Clifton.");
-                    if (!this.typeSelectorContainer.querySelector('p.init-error')) {
-                      this.typeSelectorContainer.innerHTML += '<p class="init-error" style="color: red;">Error: Required dropdown library not loaded correctly.</p>';
-                    }
-                }
-            }, 50); // 50ms delay - adjust if needed, but usually sufficient
-
-        } else { // For non-Clifton dropdowns
-            const typeSelectElement = document.getElementById(selectId);
-            if (typeSelectElement) {
-                typeSelectElement.addEventListener('change', (e) => {
-                    this.mapResultButton.style.display = e.target.value ? 'block' : 'none';
-                });
-            }
+                        selectElement.select2({ placeholder: placeholder, maximumSelectionLength: 5, closeOnSelect: false });
+                        selectElement.on('change', () => { const count = selectElement.select2('data').length; this.mapResultButton.style.display = count === 5 ? 'block' : 'none'; });
+                        const errorP = this.typeSelectorContainer.querySelector('p.init-error'); if (errorP) errorP.remove();
+                    } catch (e) { console.error("Error *during* Select2 initialization:", e); if (!this.typeSelectorContainer.querySelector('p.init-error')) { this.typeSelectorContainer.innerHTML += '<p class="init-error" style="color: red;">Error initializing interactive dropdown component.</p>'; } }
+                } else { console.error("jQuery or $.fn.select2 not available for Clifton."); if (!this.typeSelectorContainer.querySelector('p.init-error')) { this.typeSelectorContainer.innerHTML += '<p class="init-error" style="color: red;">Error: Required dropdown library not loaded correctly.</p>'; } }
+            }, 100); // 100ms delay
+        } else {
+            const typeSelectElement = document.getElementById(selectId); // Target by ID
+            if (typeSelectElement) { typeSelectElement.addEventListener('change', (e) => { this.mapResultButton.style.display = e.target.value ? 'block' : 'none'; }); }
         }
     }
     // --- END of UPDATED updateTypeSelector ---
 
+    // --- UPDATED processImportSelection (with selectId fix) ---
     processImportSelection() {
         const system = this.assessmentSystemSelect.value;
         let selectedValue;
         let mappedResultData;
-         this.importedSystem = system;
+        this.importedSystem = system;
 
-         if (typeof importMappings === 'undefined') {
-             console.error("Cannot process import: Mapping data not loaded.");
-             alert("An error occurred loading assessment mappings. Please try again later."); return;
-         }
+        // Assumes importMappings is global (from hero-data.js)
+        if (typeof importMappings === 'undefined') {
+            console.error("Mappings not loaded.");
+            alert("Mapping error.");
+            return;
+        }
 
         if (system === 'clifton') {
-            if (typeof $ !== 'undefined' && $(`#${selectId}`).data('select2')) { // Check Select2 again before getting value
-                selectedValue = $('#typeSelect').val();
+             // Use the actual ID 'typeSelect' here for the check and value retrieval
+            if (typeof $ !== 'undefined' && $('#typeSelect').data('select2')) { // **** FIXED CHECK ****
+                selectedValue = $('#typeSelect').val(); // **** FIXED VALUE RETRIEVAL ****
+                console.log('Clifton - Selected Values:', selectedValue);
             } else {
-                 console.error("Clifton Select2 not ready for value retrieval.");
-                 alert("Dropdown error. Please re-select the assessment system or try again."); return;
+                console.error("Clifton Select2 not ready for value retrieval.");
+                alert("Dropdown error. Please re-select the assessment system or try again.");
+                return;
             }
+
             if (!selectedValue || selectedValue.length !== 5) {
-                alert("Please select exactly 5 CliftonStrengths themes."); return;
+               alert("Please select exactly 5 CliftonStrengths themes.");
+               return;
             }
-             mappedResultData = this.mapCliftonStrengths(selectedValue);
-        } else {
+            mappedResultData = this.mapCliftonStrengths(selectedValue);
+            console.log('Clifton - Mapped Data Result:', mappedResultData);
+
+        } else { // For other systems
             const typeSelectElement = document.getElementById('typeSelect');
             selectedValue = typeSelectElement ? typeSelectElement.value : null;
-             if (!selectedValue) {
-                alert("Please select your type."); return;
-             }
-             mappedResultData = importMappings[system]?.[selectedValue];
+            if (!selectedValue) {
+               alert("Please select your type.");
+               return;
+            }
+            mappedResultData = importMappings[system]?.[selectedValue];
+            console.log(system, '- Mapped Data Result:', mappedResultData);
         }
 
         if (mappedResultData && mappedResultData.length >= 2) {
+            console.log("Mapping successful, proceeding to display results...");
             this.isImportResult = true;
             this.currentResults = [];
-            for (let i = 0; i < mappedResultData.length; i += 2) {
-                const heroType = mappedResultData[i];
-                const domain = mappedResultData[i+1];
-                if (heroType && domain && heroDescriptions[heroType] && domainDescriptions[domain]) {
-                    this.currentResults.push({ heroType, domain });
-                } else {
-                     console.warn(`Invalid mapping pair found: Type=${heroType}, Domain=${domain}. Skipping.`);
-                }
-            }
-             if (this.currentResults.length === 0) {
-                 alert("The selected type resulted in an invalid mapping. Please check the data or try another type.");
-                 console.error("Mapping produced no valid HeroType/Domain pairs for:", system, selectedValue, mappedResultData); return;
+             // Assumes heroDescriptions and domainDescriptions are global
+             for (let i = 0; i < mappedResultData.length; i += 2) {
+                 const heroType = mappedResultData[i];
+                 const domain = mappedResultData[i+1];
+                 if (heroType && domain && heroDescriptions[heroType] && domainDescriptions[domain]) {
+                     this.currentResults.push({ heroType, domain });
+                 } else {
+                      console.warn(`Invalid mapping pair found: Type=${heroType}, Domain=${domain}. Skipping.`);
+                 }
              }
+            if (this.currentResults.length === 0) {
+                alert("The selected type resulted in an invalid mapping. Please check the data or try another type.");
+                console.error("Mapping produced no valid HeroType/Domain pairs for:", system, selectedValue, mappedResultData);
+                return;
+            }
             this.resultIndex = 0;
             this.displayResult();
         } else {
-            alert(`Could not find a mapping for the selected ${system.toUpperCase()} type "${selectedValue}". Please ensure it's selected correctly or contact support.`);
-            console.error("Mapping lookup failed for:", system, selectedValue, "Resulting data:", mappedResultData);
+            console.error("Mapping check failed or data insufficient:", mappedResultData);
+             if (system === 'clifton') { // Give specific feedback for Clifton if it fails here
+                alert('Mapping calculation failed for CliftonStrengths. Check console.');
+             }
         }
     }
+    // --- END of UPDATED processImportSelection ---
 
      mapCliftonStrengths(top5) {
-         if (typeof importMappings === 'undefined' || !importMappings.clifton) {
-             console.error("Cannot map CliftonStrengths: Mapping data not loaded."); return [];
-         }
-        let coreScores = { motivator: 0, analyst: 0, guardian: 0 };
-        let secondaryScores = { connector: 0, pioneer: 0, steward: 0 };
-        let domainScores = { mountain: 0, island: 0, forest: 0, desert: 0 };
-        top5.forEach(strength => {
-            const affinities = importMappings.clifton[strength];
-            if (affinities) {
-                if (affinities[0] && coreScores.hasOwnProperty(affinities[0])) coreScores[affinities[0]]++;
-                if (affinities[1] && secondaryScores.hasOwnProperty(affinities[1])) secondaryScores[affinities[1]]++;
-                if (affinities[2] && domainScores.hasOwnProperty(affinities[2])) domainScores[affinities[2]]++;
-            }
-        });
-        const combinedScores = [];
-        Object.keys(coreScores).forEach(core => {
-            Object.keys(secondaryScores).forEach(secondary => {
-                const type = `${core}-${secondary}`;
-                if (heroDescriptions[type]) {
-                    combinedScores.push({ type: type, score: coreScores[core] + secondaryScores[secondary] });
-                }
-            });
-        });
-        if (combinedScores.length === 0) {
-             console.warn("Clifton mapping produced no valid combined HeroType scores."); return [];
-        }
-        combinedScores.sort((a, b) => b.score - a.score);
-         const sortedDomains = Object.entries(domainScores)
-            .sort(([, scoreA], [, scoreB]) => scoreB - scoreA)
-            .map(([domain]) => domain);
-         const results = [];
-         for (let i = 0; i < Math.min(3, combinedScores.length); i++) {
-             const heroType = combinedScores[i].type;
-             const domain = sortedDomains[i % sortedDomains.length];
-             if (domainDescriptions[domain]) {
-                results.push(heroType);
-                results.push(domain);
-             } else {
-                 if (sortedDomains.length > (i % sortedDomains.length) + 1 && domainDescriptions[sortedDomains[(i % sortedDomains.length) + 1]]) {
-                    results.push(heroType);
-                    results.push(sortedDomains[(i % sortedDomains.length) + 1]);
-                 } else { console.warn(`Could not find valid domain pairing for ${heroType}`); }
-             }
-         }
-         if (results.length === 0 && combinedScores.length > 0) {
-             const firstValidHeroType = combinedScores[0].type;
-             const firstValidDomain = sortedDomains.find(d => domainDescriptions[d]);
-             if (firstValidHeroType && firstValidDomain) {
-                results.push(firstValidHeroType);
-                results.push(firstValidDomain);
-             }
-         }
+         // Assumes importMappings, heroDescriptions, domainDescriptions are global
+         if (typeof importMappings === 'undefined' || !importMappings.clifton) { console.error("Clifton mappings not loaded."); return []; }
+         let core = { m: 0, a: 0, g: 0 }, sec = { c: 0, p: 0, s: 0 }, dom = { mtn: 0, isl: 0, fst: 0, dst: 0 };
+         const scoreMap = { motivator: 'm', analyst: 'a', guardian: 'g', connector: 'c', pioneer: 'p', steward: 's', mountain: 'mtn', island: 'isl', forest: 'fst', desert: 'dst' };
+         const revCore = { m: 'motivator', a: 'analyst', g: 'guardian' }; const revSec = { c: 'connector', p: 'pioneer', s: 'steward' };
+         top5.forEach(str => { const aff = importMappings.clifton[str]; if (aff) { if (aff[0] && scoreMap[aff[0]]) core[scoreMap[aff[0]]]++; if (aff[1] && scoreMap[aff[1]]) sec[scoreMap[aff[1]]]++; if (aff[2] && scoreMap[aff[2]]) dom[scoreMap[aff[2]]]++; } });
+         const combined = []; Object.keys(core).forEach(c => { Object.keys(sec).forEach(s => { const type = `${revCore[c]}-${revSec[s]}`; if (heroDescriptions[type]) combined.push({ type: type, score: core[c] + sec[s] }); }); });
+         if (combined.length === 0) { console.warn("Clifton mapping: no valid types."); return []; }
+         combined.sort((a, b) => b.score - a.score); const sortedDoms = Object.entries(dom).sort(([, vA], [, vB]) => vB - vA).map(([k]) => ({ mtn: 'mountain', isl: 'island', fst: 'forest', dst: 'desert' }[k]));
+         const results = []; for (let i = 0; i < Math.min(3, combined.length); i++) { const hType = combined[i].type; const domain = sortedDoms[i % sortedDoms.length]; if (domainDescriptions[domain]) { results.push(hType); results.push(domain); } else { const nextDom = sortedDoms[(i % sortedDoms.length) + 1]; if (nextDom && domainDescriptions[nextDom]) { results.push(hType); results.push(nextDom); } else { console.warn(`Could not find valid domain pairing for ${hType}`); } } }
+         if (results.length === 0 && combined.length > 0) { const fH = combined[0].type; const fD = sortedDoms.find(d => domainDescriptions[d]); if (fH && fD) { results.push(fH); results.push(fD); } }
+         console.log('mapCliftonStrengths returning:', results); // Keep log for debugging
          return results;
      }
 
-    displayResult() {
-        if (!this.currentResults || this.currentResults.length === 0 || this.resultIndex >= this.currentResults.length || !this.currentResults[this.resultIndex]) {
-             this.resultScreen.innerHTML = `<p>Error: Could not determine result.</p><button class="result-button retake" onclick="window.heroApp.showScreen('intro')">Start Over</button>`;
-             this.showScreen('result'); console.error("DisplayResult error: Invalid currentResults or resultIndex.", { results: this.currentResults, index: this.resultIndex }); return;
-        }
-        const current = this.currentResults[this.resultIndex];
-        const heroType = current.heroType; const domain = current.domain;
-         if (typeof heroDescriptions === 'undefined' || typeof domainDescriptions === 'undefined') {
-             console.error("Cannot display results: Description data not loaded."); this.resultScreen.innerHTML = `<p>Error loading result descriptions.</p><button class="result-button retake" onclick="window.heroApp.showScreen('intro')">Start Over</button>`; this.showScreen('result'); return;
-         }
-        const heroDesc = heroDescriptions[heroType]; const domainDesc = domainDescriptions[domain];
-        if (!heroDesc || !domainDesc) {
-            console.error("Missing description data for HeroType:", heroType, "or Domain:", domain); this.resultScreen.innerHTML = `<p>Error: Result data missing for ${heroType}/${domain}.</p><button class="result-button retake" onclick="window.heroApp.showScreen('intro')">Start Over</button>`; this.showScreen('result'); return;
-        }
-        const characterListHTML = (heroDesc.characters || []).map(char => `<li>${char}</li>`).join('');
-        const canGoPrevious = this.resultIndex > 0; const canGoNext = this.resultIndex < this.currentResults.length - 1;
-        const sourceText = this.importedSystem ? `Result based on ${this.isImportResult ? 'imported ' + this.importedSystem.toUpperCase() : this.importedSystem}.` : 'Result generated.';
-         let html = `<h1>${heroDesc.title}</h1><p style="text-align: center;"><strong>${heroDesc.type}</strong></p><p>${heroDesc.description}</p><p><strong>Power:</strong> ${heroDesc.power}</p><h2>You're a lot like...</h2><ul class="character-list">${characterListHTML}</ul><h2>Domain</h2><p><strong>${domainDesc.title}</strong></p><p>${domainDesc.description}</p><p><strong>Power:</strong> ${domainDesc.power}</p>`;
-        if (!this.isImportResult) { html += `<div class="chart-container"><canvas id="scoreChart"></canvas></div>`; }
-         html += `<p style="text-align:center; font-style:italic; color:#666; margin-top:20px;">${sourceText}</p>`;
-         html += `<div class="result-navigation"><p>Not quite right? Try the next best match or start over.</p><button class="result-button previous" onclick="window.heroApp.previousResult()" ${!canGoPrevious ? 'disabled' : ''}>Previous Result</button><button class="result-button" onclick="window.heroApp.nextResult()" ${!canGoNext ? 'disabled' : ''}>Next Best Result</button><button class="result-button retake" onclick="window.heroApp.showScreen('intro')">Start Over</button>${!canGoNext ? '<p class="no-more-results">No further results available.</p>' : ''}</div>`;
-        this.resultScreen.innerHTML = html;
-        this.showScreen('result');
-        if (!this.isImportResult && this.quiz && this.quiz.scores) {
-             setTimeout(() => { this.initializeChart(this.quiz.scores); }, 100);
-        }
-    }
+     displayResult() {
+         if (!this.currentResults || this.currentResults.length === 0 || this.resultIndex >= this.currentResults.length || !this.currentResults[this.resultIndex]) { this.resultScreen.innerHTML = `<p>Error: Could not determine result.</p><button class="result-button retake" onclick="window.heroApp.showScreen('intro')">Start Over</button>`; this.showScreen('result'); console.error("DisplayResult error:", this.currentResults, this.resultIndex); return; }
+         const current = this.currentResults[this.resultIndex]; const heroType = current.heroType; const domain = current.domain;
+         if (typeof heroDescriptions === 'undefined' || typeof domainDescriptions === 'undefined') { console.error("Desc data not loaded."); this.resultScreen.innerHTML = `<p>Error loading descriptions.</p><button class="result-button retake" onclick="window.heroApp.showScreen('intro')">Start Over</button>`; this.showScreen('result'); return; }
+         const heroDesc = heroDescriptions[heroType]; const domainDesc = domainDescriptions[domain];
+         if (!heroDesc || !domainDesc) { console.error("Missing desc data for:", heroType, domain); this.resultScreen.innerHTML = `<p>Error: Result data missing for ${heroType}/${domain}.</p><button class="result-button retake" onclick="window.heroApp.showScreen('intro')">Start Over</button>`; this.showScreen('result'); return; }
+         const charList = (heroDesc.characters || []).map(char => `<li>${char}</li>`).join(''); const canPrev = this.resultIndex > 0; const canNext = this.resultIndex < this.currentResults.length - 1;
+         const srcText = this.importedSystem ? `Result based on ${this.isImportResult ? 'imported ' + this.importedSystem.toUpperCase() : this.importedSystem}.` : 'Result generated.';
+         let html = `<h1>${heroDesc.title}</h1><p style="text-align: center;"><strong>${heroDesc.type}</strong></p><p>${heroDesc.description}</p><p><strong>Power:</strong> ${heroDesc.power}</p><h2>You're a lot like...</h2><ul class="character-list">${charList}</ul><h2>Domain</h2><p><strong>${domainDesc.title}</strong></p><p>${domainDesc.description}</p><p><strong>Power:</strong> ${domainDesc.power}</p>`;
+         if (!this.isImportResult) { html += `<div class="chart-container"><canvas id="scoreChart"></canvas></div>`; }
+         html += `<p style="text-align:center; font-style:italic; color:#666; margin-top:20px;">${srcText}</p>`;
+         html += `<div class="result-navigation"><p>Not quite right? Try the next best match or start over.</p><button class="result-button previous" onclick="window.heroApp.previousResult()" ${!canPrev ? 'disabled' : ''}>Previous Result</button><button class="result-button" onclick="window.heroApp.nextResult()" ${!canNext ? 'disabled' : ''}>Next Best Result</button><button class="result-button retake" onclick="window.heroApp.showScreen('intro')">Start Over</button>${!canNext ? '<p class="no-more-results">No further results available.</p>' : ''}</div>`;
+         this.resultScreen.innerHTML = html; this.showScreen('result');
+         if (!this.isImportResult && this.quiz && this.quiz.scores) { setTimeout(() => { this.initializeChart(this.quiz.scores); }, 100); }
+     }
 
-    nextResult() {
-        if (this.resultIndex < this.currentResults.length - 1) { this.resultIndex++; this.displayResult(); }
-    }
-
-    previousResult() {
-        if (this.resultIndex > 0) { this.resultIndex--; this.displayResult(); }
-    }
+    nextResult() { if (this.resultIndex < this.currentResults.length - 1) { this.resultIndex++; this.displayResult(); } }
+    previousResult() { if (this.resultIndex > 0) { this.resultIndex--; this.displayResult(); } }
 
     initializeChart(scores) {
-        if (typeof Chart === 'undefined') { console.error("Chart.js not loaded."); return; }
-        const chartElement = document.getElementById('scoreChart');
-        if (!chartElement) { return; }
-        const ctx = chartElement.getContext('2d');
+        if (typeof Chart === 'undefined') { console.error("Chart.js not loaded."); return; } const chartEl = document.getElementById('scoreChart'); if (!chartEl) return; const ctx = chartEl.getContext('2d');
         if (!scores || !scores.core || !scores.secondary) { console.error("Invalid scores for chart:", scores); return; }
-        const traitLabels = ['Motivator', 'Analyst', 'Guardian', 'Connector', 'Pioneer', 'Steward'];
-        const traitScores = [scores.core.motivator ?? 0, scores.core.analyst ?? 0, scores.core.guardian ?? 0, scores.secondary.connector ?? 0, scores.secondary.pioneer ?? 0, scores.secondary.steward ?? 0];
+        const labels = ['Motivator', 'Analyst', 'Guardian', 'Connector', 'Pioneer', 'Steward']; const data = [scores.core.motivator ?? 0, scores.core.analyst ?? 0, scores.core.guardian ?? 0, scores.secondary.connector ?? 0, scores.secondary.pioneer ?? 0, scores.secondary.steward ?? 0];
         if (this.scoreChartInstance) { this.scoreChartInstance.destroy(); this.scoreChartInstance = null; }
-        try {
-             this.scoreChartInstance = new Chart(ctx, {
-                 type: 'bar',
-                 data: { labels: traitLabels, datasets: [{ label: 'Your Trait Scores', data: traitScores, backgroundColor: 'rgba(41, 145, 222, 0.6)', borderColor: 'rgba(41, 145, 222, 1)', borderWidth: 1 }] },
-                 options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, scales: { x: { beginAtZero: true, title: { display: true, text: 'Scores' }, ticks: { stepSize: 2, color: '#333' }, grid: { color: '#eee'} }, y: { title: { display: false }, ticks: { color: '#333' }, grid: { display: false } } }, plugins: { legend: { display: false }, title: { display: true, text: 'Your HeroType Trait Scores', color: '#333', font: { size: 16 } } }, animation: { duration: 400, easing: 'easeOutQuad' } }
-             });
-        } catch (e) {
-             console.error("Error creating Chart:", e);
-             chartElement.parentElement.innerHTML = '<p style="color: red;">Could not display scores chart.</p>';
-        }
+        try { this.scoreChartInstance = new Chart(ctx, { type: 'bar', data: { labels: labels, datasets: [{ label: 'Your Trait Scores', data: data, backgroundColor: 'rgba(41, 145, 222, 0.6)', borderColor: 'rgba(41, 145, 222, 1)', borderWidth: 1 }] }, options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, scales: { x: { beginAtZero: true, title: { display: true, text: 'Scores' }, ticks: { stepSize: 2, color: '#333' }, grid: { color: '#eee'} }, y: { title: { display: false }, ticks: { color: '#333' }, grid: { display: false } } }, plugins: { legend: { display: false }, title: { display: true, text: 'Your HeroType Trait Scores', color: '#333', font: { size: 16 } } }, animation: { duration: 400, easing: 'easeOutQuad' } } }); }
+        catch (e) { console.error("Error creating Chart:", e); chartEl.parentElement.innerHTML = '<p style="color: red;">Could not display scores chart.</p>'; }
     }
 }
 
