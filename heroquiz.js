@@ -298,7 +298,10 @@ class HeroQuiz {
 
 // --- End of hero-quiz.js ---
 </script>
-<script>// FILE: hero-app.js (Updated with selectId fix and robust Select2 init)
+
+    
+<script>
+    // FILE: hero-app.js (Updated with selectId fix and robust Select2 init)
 
 class HeroApp {
     constructor() {
@@ -509,76 +512,76 @@ class HeroApp {
     // --- END of UPDATED updateTypeSelector ---
 
     // --- UPDATED processImportSelection (with selectId fix) ---
-    processImportSelection() {
-        const system = this.assessmentSystemSelect.value;
-        let selectedValue;
-        let mappedResultData;
-        this.importedSystem = system;
+  processImportSelection() {
+    const system = this.assessmentSystemSelect.value;
+    let selectedValue;
+    let mappedResultData;
+    this.importedSystem = system;
 
-        // Assumes importMappings is global (from hero-data.js)
-        if (typeof importMappings === 'undefined') {
-            console.error("Mappings not loaded.");
-            alert("Mapping error.");
+    // Assumes importMappings is global (from hero-data.js)
+    if (typeof importMappings === 'undefined') {
+        console.error("Mappings not loaded.");
+        alert("Mapping error.");
+        return;
+    }
+
+    if (system === 'clifton') {
+         // Use the actual ID 'typeSelect' here for the check and value retrieval
+        if (typeof $ !== 'undefined' && $('#typeSelect').data('select2')) { // **** VERIFY THIS LINE ****
+            selectedValue = $('#typeSelect').val(); // **** VERIFY THIS LINE ****
+            console.log('Clifton - Selected Values:', selectedValue); // LOG 1
+        } else {
+            console.error("Clifton Select2 not ready for value retrieval.");
+            alert("Dropdown error. Please re-select the assessment system or try again.");
             return;
         }
 
-        if (system === 'clifton') {
-             // Use the actual ID 'typeSelect' here for the check and value retrieval
-            if (typeof $ !== 'undefined' && $('#typeSelect').data('select2')) { // **** FIXED CHECK ****
-                selectedValue = $('#typeSelect').val(); // **** FIXED VALUE RETRIEVAL ****
-                console.log('Clifton - Selected Values:', selectedValue);
-            } else {
-                console.error("Clifton Select2 not ready for value retrieval.");
-                alert("Dropdown error. Please re-select the assessment system or try again.");
-                return;
-            }
-
-            if (!selectedValue || selectedValue.length !== 5) {
-               alert("Please select exactly 5 CliftonStrengths themes.");
-               return;
-            }
-            mappedResultData = this.mapCliftonStrengths(selectedValue);
-            console.log('Clifton - Mapped Data Result:', mappedResultData);
-
-        } else { // For other systems
-            const typeSelectElement = document.getElementById('typeSelect');
-            selectedValue = typeSelectElement ? typeSelectElement.value : null;
-            if (!selectedValue) {
-               alert("Please select your type.");
-               return;
-            }
-            mappedResultData = importMappings[system]?.[selectedValue];
-            console.log(system, '- Mapped Data Result:', mappedResultData);
+        if (!selectedValue || selectedValue.length !== 5) {
+           alert("Please select exactly 5 CliftonStrengths themes.");
+           return;
         }
+        mappedResultData = this.mapCliftonStrengths(selectedValue);
+        console.log('Clifton - Mapped Data Result:', mappedResultData); // LOG 2
 
-        if (mappedResultData && mappedResultData.length >= 2) {
-            console.log("Mapping successful, proceeding to display results...");
-            this.isImportResult = true;
-            this.currentResults = [];
-             // Assumes heroDescriptions and domainDescriptions are global
-             for (let i = 0; i < mappedResultData.length; i += 2) {
-                 const heroType = mappedResultData[i];
-                 const domain = mappedResultData[i+1];
-                 if (heroType && domain && heroDescriptions[heroType] && domainDescriptions[domain]) {
-                     this.currentResults.push({ heroType, domain });
-                 } else {
-                      console.warn(`Invalid mapping pair found: Type=${heroType}, Domain=${domain}. Skipping.`);
-                 }
-             }
-            if (this.currentResults.length === 0) {
-                alert("The selected type resulted in an invalid mapping. Please check the data or try another type.");
-                console.error("Mapping produced no valid HeroType/Domain pairs for:", system, selectedValue, mappedResultData);
-                return;
-            }
-            this.resultIndex = 0;
-            this.displayResult();
-        } else {
-            console.error("Mapping check failed or data insufficient:", mappedResultData);
-             if (system === 'clifton') { // Give specific feedback for Clifton if it fails here
-                alert('Mapping calculation failed for CliftonStrengths. Check console.');
-             }
+    } else { // For other systems
+        const typeSelectElement = document.getElementById('typeSelect');
+        selectedValue = typeSelectElement ? typeSelectElement.value : null;
+        if (!selectedValue) {
+           alert("Please select your type.");
+           return;
         }
+        mappedResultData = importMappings[system]?.[selectedValue];
+        console.log(system, '- Mapped Data Result:', mappedResultData);
     }
+
+    if (mappedResultData && mappedResultData.length >= 2) {
+        console.log("Mapping successful, proceeding to display results..."); // LOG 3
+        this.isImportResult = true;
+        this.currentResults = [];
+         // Assumes heroDescriptions and domainDescriptions are global
+         for (let i = 0; i < mappedResultData.length; i += 2) {
+             const heroType = mappedResultData[i];
+             const domain = mappedResultData[i+1];
+             if (heroType && domain && heroDescriptions[heroType] && domainDescriptions[domain]) {
+                 this.currentResults.push({ heroType, domain });
+             } else {
+                  console.warn(`Invalid mapping pair found: Type=${heroType}, Domain=${domain}. Skipping.`);
+             }
+         }
+        if (this.currentResults.length === 0) {
+            alert("The selected type resulted in an invalid mapping. Please check the data or try another type.");
+            console.error("Mapping produced no valid HeroType/Domain pairs for:", system, selectedValue, mappedResultData);
+            return;
+        }
+        this.resultIndex = 0;
+        this.displayResult();
+    } else {
+        console.error("Mapping check failed or data insufficient:", mappedResultData); // LOG 4
+         if (system === 'clifton') { // Give specific feedback for Clifton if it fails here
+            alert('Mapping calculation failed for CliftonStrengths. Check console.');
+         }
+    }
+}
     // --- END of UPDATED processImportSelection ---
 
      mapCliftonStrengths(top5) {
