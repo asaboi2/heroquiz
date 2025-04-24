@@ -581,7 +581,7 @@ class HeroApp {
             alert('Mapping calculation failed for CliftonStrengths. Check console.');
          }
     }
-}
+
     // --- END of UPDATED processImportSelection ---
 
      mapCliftonStrengths(top5) {
