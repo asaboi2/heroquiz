@@ -13,6 +13,7 @@ const heroDescriptions = {
     "guardian-steward": { title: "You're a Warden!", type: "Guardian + Steward", description: "You are an anchor of stability, embodying steadfast principles and ensuring order through your unshakeable resolve.", power: "As a Hero, your unwavering personal compass and commanding presence will allow you to enforce order and delegate for your team, serving as a beacon of integrity.", characters: ["Ron Swanson (Parks & Rec)", "Minerva McGonagall (Harry Potter)", "Mike Ehrmantraut (Breaking Bad)"] }
 };
 
+
 const domainDescriptions = {
     mountain: { title: "Your Domain is the Mountain", description: "You move fast and act boldly, helping teams gain momentum when they need it most. You lead through energy and conviction.", power: "On QuestWorks adventures, you can act decisively—even when it might be reckless—and help the team seize the moment." },
     island: { title: "Your Domain is the Island", description: "You're a deliberate thinker who brings calm, clarity, and long-range planning. You lead through insight and restraint.", power: "On QuestWorks adventures, you can reveal a hidden plan or contingency—something you prepared when no one else was looking ahead." },
